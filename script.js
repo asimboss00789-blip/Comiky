@@ -7,8 +7,18 @@ let currentChapter = null;
 let favorites = [];
 let page = 1;
 const perPage = 20;
-const mangaContainer = document.getElementById('manga-container');
-const searchInput = document.getElementById('search-input');
+
+// Detect containers from your existing HTML
+const mangaContainer = document.querySelector('.manga-grid') || document.createElement('div');
+const chapterContainer = document.querySelector('.chapter-list') || document.createElement('ul');
+const readerContainer = document.querySelector('.reader') || document.createElement('div');
+const searchInput = document.querySelector('input[type="search"]') || document.createElement('input');
+
+// Append containers if not present
+if (!document.body.contains(mangaContainer)) document.body.appendChild(mangaContainer);
+if (!document.body.contains(chapterContainer)) document.body.appendChild(chapterContainer);
+if (!document.body.contains(readerContainer)) document.body.appendChild(readerContainer);
+if (!document.body.contains(searchInput)) document.body.insertBefore(searchInput, document.body.firstChild);
 
 // ========================
 // Fetch Manga List
@@ -39,11 +49,13 @@ function renderManga(list) {
         div.innerHTML = `
             <img src="${manga.cover}" alt="${manga.title}">
             <h3>${manga.title}</h3>
-            <button onclick="toggleFavorite('${manga.id}')">
-                ${favorites.includes(manga.id) ? '★' : '☆'}
-            </button>
+            <button class="fav-btn">${favorites.includes(manga.id) ? '★' : '☆'}</button>
         `;
-        div.onclick = () => loadChapters(manga.id);
+        div.querySelector('.fav-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFavorite(manga.id);
+        });
+        div.addEventListener('click', () => loadChapters(manga.id));
         mangaContainer.appendChild(div);
     });
 }
@@ -56,13 +68,12 @@ function loadChapters(mangaId) {
     fetch(`/backend/api_chapters.php?manga_id=${mangaId}`)
         .then(res => res.json())
         .then(chapters => {
-            const chapterList = document.getElementById('chapter-list');
-            chapterList.innerHTML = '';
+            chapterContainer.innerHTML = '';
             chapters.forEach(ch => {
                 const li = document.createElement('li');
                 li.innerText = ch.title;
-                li.onclick = () => loadPages(ch.id);
-                chapterList.appendChild(li);
+                li.addEventListener('click', () => loadPages(ch.id));
+                chapterContainer.appendChild(li);
             });
         });
 }
@@ -75,12 +86,11 @@ function loadPages(chapterId) {
     fetch(`/backend/api_pages.php?chapter_id=${chapterId}`)
         .then(res => res.json())
         .then(pages => {
-            const reader = document.getElementById('reader');
-            reader.innerHTML = '';
+            readerContainer.innerHTML = '';
             pages.forEach(pg => {
                 const img = document.createElement('img');
                 img.src = pg.url;
-                reader.appendChild(img);
+                readerContainer.appendChild(img);
             });
         });
 }
@@ -99,7 +109,7 @@ function toggleFavorite(mangaId) {
         body: JSON.stringify({ favorites })
     });
 
-    // Re-render manga list to update star
+    // Refresh manga cards
     mangaContainer.innerHTML = '';
     renderManga(mangaList);
 }
