@@ -1,19 +1,14 @@
 <?php
+require_once 'ComickIo.php';
+
 header('Content-Type: application/json');
-require 'ComickIo.php';
 
-$comick = new ComickIo();
-
-if(!isset($_GET['chapter_id'])){
-    echo json_encode(['status'=>false,'message'=>'Chapter ID required']);
+if (!isset($_GET['chapter_id'])) {
+    echo json_encode([]);
     exit;
 }
 
-$chapterId = $_GET['chapter_id'];
-$pages = $comick->getComicChapter($chapterId);
+$comick = new ComickIo();
+$pages = $comick->getPages($_GET['chapter_id']); // adjust method name
 
-echo json_encode([
-    'status'=>true,
-    'chapter_id'=>$chapterId,
-    'pages'=>$pages
-]);
+echo json_encode($pages);
