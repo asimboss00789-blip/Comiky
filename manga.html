@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MangaVerse - Manga Details</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <h1>MangaVerse</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="#">Genres</a>
+      <a href="#">Popular</a>
+      <a href="#">Latest</a>
+      <a href="#" class="login">Login</a>
+    </nav>
+    <div class="input-group">
+      <input required type="text" name="text" class="input">
+      <label class="user-label">Search Manga</label>
+    </div>
+  </header>
 
+  <main>
+    <section>
+      <h2 id="manga-title" class="section-title">Loading Manga...</h2>
+      <div id="chapter-list" class="chapter-list"></div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Reader</h2>
+      <div id="reader-container" class="reader"></div>
+    </section>
+  </main>
+
+  <div class="footer">
+    &copy; 2025 MangaVerse. All rights reserved.
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
