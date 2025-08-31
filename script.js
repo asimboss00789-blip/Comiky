@@ -1,180 +1,131 @@
-// ====================== FULL script.js ======================
-
-const mangaContainer = document.getElementById('manga-container');
-const chapterContainer = document.getElementById('chapter-container');
-const readerContainer = document.getElementById('reader-container');
-const favoritesContainer = document.getElementById('favorites-container');
-const searchInput = document.getElementById('search-input');
-const backButton = document.getElementById('back-to-chapters');
-const toggleFavBtn = document.getElementById('toggle-favorites');
-
-let currentMangaId = null;
-let currentChapterId = null;
-let currentPage = 1;
+// ========================
+// Variables
+// ========================
+let mangaList = [];
+let currentManga = null;
+let currentChapter = null;
+let favorites = [];
+let page = 1;
 const perPage = 20;
-let loadingManga = false;
+const mangaContainer = document.getElementById('manga-container');
+const searchInput = document.getElementById('search-input');
 
-// ---------- FETCH MANGA ----------
-async function fetchManga(page = 1){
-    if(loadingManga) return;
-    loadingManga = true;
-
-    try {
-        const res = await fetch(`/backend/api_manga.php?page=${page}&per_page=${perPage}`);
-        if(!res.ok) throw new Error('Failed to fetch manga');
-        const data = await res.json();
-        if(data.data && data.data.length > 0){
-            displayManga(data.data, page > 1);
-        }
-    } catch(err){
-        alert(err.message);
+// ========================
+// Fetch Manga List
+// ========================
+function fetchManga(reset = false) {
+    if (reset) {
+        mangaContainer.innerHTML = '';
+        page = 1;
     }
 
-    loadingManga = false;
+    fetch(`/backend/api_manga.php?page=${page}&per_page=${perPage}`)
+        .then(res => res.json())
+        .then(data => {
+            mangaList = mangaList.concat(data);
+            renderManga(data);
+            page++;
+        })
+        .catch(err => console.error(err));
 }
 
-// ---------- DISPLAY MANGA ----------
-function displayManga(mangaList, append = false){
-    if(!append) mangaContainer.innerHTML = '';
-    mangaList.forEach(manga => {
+// ========================
+// Render Manga
+// ========================
+function renderManga(list) {
+    list.forEach(manga => {
         const div = document.createElement('div');
         div.className = 'manga-card';
         div.innerHTML = `
             <img src="${manga.cover}" alt="${manga.title}">
             <h3>${manga.title}</h3>
-            <button onclick="viewChapters('${manga.id}')">View Chapters</button>
-            <button onclick="toggleFavorite('${manga.id}')">❤</button>
+            <button onclick="toggleFavorite('${manga.id}')">
+                ${favorites.includes(manga.id) ? '★' : '☆'}
+            </button>
         `;
+        div.onclick = () => loadChapters(manga.id);
         mangaContainer.appendChild(div);
     });
 }
 
-// ---------- FETCH CHAPTERS ----------
-async function viewChapters(mangaId){
-    currentMangaId = mangaId;
-    chapterContainer.style.display = 'grid';
-    readerContainer.innerHTML = '';
-    backButton.style.display = 'none';
-
-    try {
-        const res = await fetch(`/backend/api_chapters.php?manga_id=${mangaId}`);
-        if(!res.ok) throw new Error('Failed to fetch chapters');
-        const data = await res.json();
-        displayChapters(data.chapters);
-    } catch(err){
-        alert(err.message);
-    }
+// ========================
+// Load Chapters
+// ========================
+function loadChapters(mangaId) {
+    currentManga = mangaId;
+    fetch(`/backend/api_chapters.php?manga_id=${mangaId}`)
+        .then(res => res.json())
+        .then(chapters => {
+            const chapterList = document.getElementById('chapter-list');
+            chapterList.innerHTML = '';
+            chapters.forEach(ch => {
+                const li = document.createElement('li');
+                li.innerText = ch.title;
+                li.onclick = () => loadPages(ch.id);
+                chapterList.appendChild(li);
+            });
+        });
 }
 
-// ---------- DISPLAY CHAPTERS ----------
-function displayChapters(chapters){
-    chapterContainer.innerHTML = '';
-    chapters.forEach(chap => {
-        const div = document.createElement('div');
-        div.className = 'chapter-card';
-        div.innerHTML = `
-            <span>${chap.title}</span>
-            <button onclick="viewPages('${chap.id}')">Read</button>
-        `;
-        chapterContainer.appendChild(div);
+// ========================
+// Load Pages
+// ========================
+function loadPages(chapterId) {
+    currentChapter = chapterId;
+    fetch(`/backend/api_pages.php?chapter_id=${chapterId}`)
+        .then(res => res.json())
+        .then(pages => {
+            const reader = document.getElementById('reader');
+            reader.innerHTML = '';
+            pages.forEach(pg => {
+                const img = document.createElement('img');
+                img.src = pg.url;
+                reader.appendChild(img);
+            });
+        });
+}
+
+// ========================
+// Toggle Favorite
+// ========================
+function toggleFavorite(mangaId) {
+    const index = favorites.indexOf(mangaId);
+    if (index > -1) favorites.splice(index, 1);
+    else favorites.push(mangaId);
+
+    fetch(`/backend/api_favorites.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorites })
     });
+
+    // Re-render manga list to update star
+    mangaContainer.innerHTML = '';
+    renderManga(mangaList);
 }
 
-// ---------- FETCH PAGES ----------
-async function viewPages(chapterId){
-    currentChapterId = chapterId;
-    backButton.style.display = 'block';
-    chapterContainer.style.display = 'none';
-    readerContainer.innerHTML = '';
-
-    try {
-        const res = await fetch(`/backend/api_pages.php?chapter_id=${chapterId}`);
-        if(!res.ok) throw new Error('Failed to fetch pages');
-        const data = await res.json();
-        displayPages(data.pages);
-    } catch(err){
-        alert(err.message);
-    }
-}
-
-// ---------- DISPLAY PAGES ----------
-function displayPages(pages){
-    readerContainer.innerHTML = '';
-    pages.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.className = 'page-image';
-        readerContainer.appendChild(img);
-    });
-}
-
-// ---------- BACK BUTTON ----------
-backButton.addEventListener('click', () => {
-    readerContainer.innerHTML = '';
-    backButton.style.display = 'none';
-    chapterContainer.style.display = 'grid';
-});
-
-// ---------- FAVORITES ----------
-function toggleFavorite(mangaId){
-    let favs = JSON.parse(localStorage.getItem('favorites')) || [];
-    let message = '';
-
-    if(favs.includes(mangaId)){
-        favs = favs.filter(id => id !== mangaId);
-        message = 'Removed from favorites';
-    } else {
-        favs.push(mangaId);
-        message = 'Added to favorites';
-    }
-
-    localStorage.setItem('favorites', JSON.stringify(favs));
-    displayFavorites();
-    alert(message);
-}
-
-function displayFavorites(){
-    favoritesContainer.innerHTML = '';
-    const favs = JSON.parse(localStorage.getItem('favorites')) || [];
-    favs.forEach(id => {
-        const div = document.createElement('div');
-        div.className = 'chapter-card';
-        div.innerHTML = `<span>Manga ID: ${id}</span>
-            <button onclick="viewChapters('${id}')">View Chapters</button>`;
-        favoritesContainer.appendChild(div);
-    });
-}
-
-// ---------- FAVORITES PANEL TOGGLE ----------
-toggleFavBtn.addEventListener('click', () => {
-    if(favoritesContainer.style.display === 'grid'){
-        favoritesContainer.style.display = 'none';
-    } else {
-        favoritesContainer.style.display = 'grid';
-        displayFavorites();
-    }
-});
-
-// ---------- SEARCH ----------
+// ========================
+// Search
+// ========================
 searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase();
-    const cards = document.querySelectorAll('.manga-card');
-    cards.forEach(card => {
-        const title = card.querySelector('h3').textContent.toLowerCase();
-        card.style.display = title.includes(query) ? 'block' : 'none';
-    });
+    const filtered = mangaList.filter(m => m.title.toLowerCase().includes(query));
+    mangaContainer.innerHTML = '';
+    renderManga(filtered);
 });
 
-// ---------- INFINITE SCROLL ----------
+// ========================
+// Infinite Scroll
+// ========================
 window.addEventListener('scroll', () => {
-    if((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50){
-        currentPage++;
-        fetchManga(currentPage);
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+        fetchManga();
     }
 });
 
-// ---------- INITIALIZE ----------
-fetchManga();
-displayFavorites();
-
-// ====================== END OF SCRIPT ======================
+// ========================
+// Initial Load
+// ========================
+document.addEventListener('DOMContentLoaded', () => {
+    fetchManga();
+});
